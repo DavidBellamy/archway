@@ -19,9 +19,4 @@
   <!-- Code brackets inside the arch -->
   <path d="M48 50 L38 64 L48 78" fill="none" stroke="url(#code)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M80 50 L90 64 L80 78" fill="none" stroke="url(#code)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Keystone node at top -->
-  <circle cx="64" cy="16" r="8" fill="url(#arch)"/>
-  <!-- Connection dots on arch -->
-  <circle cx="34" cy="32" r="5" fill="url(#arch)" opacity="0.6"/>
-  <circle cx="94" cy="32" r="5" fill="url(#arch)" opacity="0.6"/>
 </svg>
