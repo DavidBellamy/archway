@@ -1,0 +1,28 @@
+@import "tailwindcss";
+@import "tldraw/tldraw.css";
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.archway-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Code block highlighted line decoration */
+.archway-highlighted-line {
+  background-color: rgba(234, 179, 8, 0.15);
+  display: block;
+}
+
+.dark .archway-highlighted-line {
+  background-color: rgba(234, 179, 8, 0.2);
+}
