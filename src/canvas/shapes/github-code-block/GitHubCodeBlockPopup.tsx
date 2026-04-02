@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useEditor, type TLShapeId } from 'tldraw'
 import { usePopup } from '../../../state/popup-context'
 import { useTheme } from '../../../state/theme-context'
@@ -70,7 +71,7 @@ export function GitHubCodeBlockPopup() {
   const highlightLines: [number, number] | undefined =
     lineStart > 0 ? [lineStart, lineEnd || lineStart] : undefined
 
-  return (
+  return createPortal(
     <div
       style={{
         position: 'fixed',
@@ -230,6 +231,7 @@ export function GitHubCodeBlockPopup() {
           <span>Press Esc to close</span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

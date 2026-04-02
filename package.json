@@ -12,6 +12,7 @@
   "dependencies": {
     "@floating-ui/react": "^0.27.19",
     "dompurify": "^3.3.3",
+    "elkjs": "^0.11.1",
     "js-yaml": "^4.1.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

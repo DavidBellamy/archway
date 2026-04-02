@@ -27,6 +27,7 @@ const PRELOADED_LANGS = [
   'bash',
   'sql',
   'dockerfile',
+  'diff',
   'graphql',
   'xml',
 ] as const

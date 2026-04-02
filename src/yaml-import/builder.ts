@@ -1,4 +1,4 @@
-import { createShapeId, type Editor } from 'tldraw'
+import { createShapeId, toRichText, type Editor } from 'tldraw'
 import type { ArchwayYamlDiagram } from './schema'
 import { assignPositions } from './layout'
 import { parseGitHubPermalink } from '../github/url-parser'
@@ -10,7 +10,11 @@ export async function buildDiagramFromYaml(
   editor: Editor,
   diagram: ArchwayYamlDiagram,
 ) {
-  const positions = assignPositions(diagram.blocks)
+  const positions = await assignPositions(
+    diagram.blocks,
+    diagram.connections ?? [],
+    diagram.layout,
+  )
   const shapeIdMap = new Map<string, ReturnType<typeof createShapeId>>()
 
   // Create all shapes
@@ -22,7 +26,6 @@ export async function buildDiagramFromYaml(
     if (block.type === 'code' && block.url) {
       const permalink = parseGitHubPermalink(block.url)
       if (!permalink) {
-        // Invalid URL, create as error code block
         editor.createShape({
           id: shapeId,
           type: GITHUB_CODE_BLOCK_TYPE,
@@ -40,6 +43,7 @@ export async function buildDiagramFromYaml(
             lineStart: 0,
             lineEnd: 0,
             language: 'text',
+            branch: block.branch ?? '',
             fetchStatus: 'error',
             fetchedCode: '',
             errorMessage: `Invalid GitHub permalink: ${block.url}`,
@@ -48,7 +52,6 @@ export async function buildDiagramFromYaml(
         continue
       }
 
-      // Create code block in loading state
       editor.createShape({
         id: shapeId,
         type: GITHUB_CODE_BLOCK_TYPE,
@@ -66,13 +69,13 @@ export async function buildDiagramFromYaml(
           lineStart: permalink.lineStart,
           lineEnd: permalink.lineEnd,
           language: detectLanguage(permalink.fileName),
+          branch: block.branch ?? '',
           fetchStatus: 'loading',
           fetchedCode: '',
           errorMessage: '',
         },
       })
 
-      // Fetch asynchronously
       const pat = localStorage.getItem(LS_PAT)
       fetchWithCache(
         permalink.owner,
@@ -119,24 +122,26 @@ export async function buildDiagramFromYaml(
           })
         })
     } else if (block.type === 'note') {
+      const noteText = block.content ?? block.label ?? ''
       editor.createShape({
         type: 'note',
         id: shapeId,
         x,
         y,
         props: {
-          text: block.content ?? block.label ?? '',
+          richText: toRichText(noteText),
         },
       } as Parameters<typeof editor.createShape>[0])
     } else {
-      // Default: text block
+      // Default: text/geo block
+      const geoText = block.content ?? block.label ?? ''
       editor.createShape({
         type: 'geo',
         id: shapeId,
         x,
         y,
         props: {
-          text: block.content ?? block.label ?? '',
+          richText: toRichText(geoText),
           w: 300,
           h: 100,
           geo: 'rectangle',
@@ -145,34 +150,58 @@ export async function buildDiagramFromYaml(
     }
   }
 
-  // Create connections (arrows between shapes)
+  // Create connections as bound arrows.
+  // Bindings make arrows follow shapes when dragged.
   if (diagram.connections) {
     for (const conn of diagram.connections) {
-      const fromId = shapeIdMap.get(conn.from)
-      const toId = shapeIdMap.get(conn.to)
-      if (!fromId || !toId) continue
+      const sourceId = shapeIdMap.get(conn.from)
+      const targetId = shapeIdMap.get(conn.to)
+      if (!sourceId || !targetId) continue
 
+      // Place arrow roughly between the two shapes
       const fromPos = positions.get(conn.from)!
       const toPos = positions.get(conn.to)!
-
-      // Position arrow start at right edge of source, end at left edge of target
-      const startX = fromPos[0] + 480
-      const startY = fromPos[1] + 100
-      const endX = toPos[0]
-      const endY = toPos[1] + 100
+      const midX = (fromPos[0] + toPos[0]) / 2
+      const midY = (fromPos[1] + toPos[1]) / 2
 
       const arrowId = createShapeId()
       editor.createShape({
         id: arrowId,
         type: 'arrow',
-        x: Math.min(startX, endX),
-        y: Math.min(startY, endY),
+        x: midX,
+        y: midY,
         props: {
-          text: conn.label ?? '',
-          start: { x: startX, y: startY },
-          end: { x: endX, y: endY },
+          richText: toRichText(conn.label ?? ''),
+          start: { x: 0, y: 0 },
+          end: { x: 1, y: 1 },
         },
       } as Parameters<typeof editor.createShape>[0])
+
+      // Bind arrow start to source shape
+      editor.createBinding({
+        type: 'arrow',
+        fromId: arrowId,
+        toId: sourceId,
+        props: {
+          terminal: 'start',
+          normalizedAnchor: { x: 0.5, y: 0.5 },
+          isExact: false,
+          isPrecise: false,
+        },
+      } as Parameters<typeof editor.createBinding>[0])
+
+      // Bind arrow end to target shape
+      editor.createBinding({
+        type: 'arrow',
+        fromId: arrowId,
+        toId: targetId,
+        props: {
+          terminal: 'end',
+          normalizedAnchor: { x: 0.5, y: 0.5 },
+          isExact: false,
+          isPrecise: false,
+        },
+      } as Parameters<typeof editor.createBinding>[0])
     }
   }
 }

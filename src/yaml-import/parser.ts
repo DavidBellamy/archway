@@ -1,5 +1,5 @@
 import yaml from 'js-yaml'
-import type { ArchwayYamlDiagram, ArchwayYamlBlock, ArchwayYamlConnection } from './schema'
+import type { ArchwayYamlDiagram, ArchwayYamlBlock, ArchwayYamlConnection, ArchwayYamlLayout } from './schema'
 
 export function parseArchwayYaml(text: string): ArchwayYamlDiagram {
   const raw = yaml.load(text) as Record<string, unknown>
@@ -43,6 +43,7 @@ export function parseArchwayYaml(text: string): ArchwayYamlDiagram {
       return {
         id: b.id as string,
         url: b.url as string | undefined,
+        branch: b.branch as string | undefined,
         type: blockType as 'code' | 'text' | 'note',
         label: b.label as string | undefined,
         content: b.content as string | undefined,
@@ -80,8 +81,19 @@ export function parseArchwayYaml(text: string): ArchwayYamlDiagram {
     }
   }
 
+  // Parse layout options
+  const rawLayout = raw.layout as Record<string, unknown> | undefined
+  const layout: ArchwayYamlLayout | undefined = rawLayout
+    ? {
+        direction: (rawLayout.direction as ArchwayYamlLayout['direction']) ?? undefined,
+        layerSpacing: typeof rawLayout.layerSpacing === 'number' ? rawLayout.layerSpacing : undefined,
+        nodeSpacing: typeof rawLayout.nodeSpacing === 'number' ? rawLayout.nodeSpacing : undefined,
+      }
+    : undefined
+
   return {
     name: (raw.name as string) ?? undefined,
+    layout,
     blocks: validatedBlocks,
     connections,
   }

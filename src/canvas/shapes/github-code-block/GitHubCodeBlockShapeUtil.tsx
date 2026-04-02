@@ -28,6 +28,7 @@ export class GitHubCodeBlockShapeUtil extends ShapeUtil<GitHubCodeBlockShape> {
     lineEnd: T.number,
     fetchedCode: T.string,
     language: T.string,
+    branch: T.string,
     fetchStatus: T.string,
     errorMessage: T.string,
   }
@@ -46,6 +47,7 @@ export class GitHubCodeBlockShapeUtil extends ShapeUtil<GitHubCodeBlockShape> {
       lineEnd: 0,
       fetchedCode: '',
       language: 'text',
+      branch: '',
       fetchStatus: 'idle',
       errorMessage: '',
     }
@@ -82,6 +84,17 @@ export class GitHubCodeBlockShapeUtil extends ShapeUtil<GitHubCodeBlockShape> {
     })
   }
 
+  override onDoubleClick(shape: GitHubCodeBlockShape) {
+    if (shape.props.fetchStatus === 'success') {
+      window.dispatchEvent(
+        new CustomEvent('archway:open-popup', {
+          detail: { shapeId: shape.id },
+        }),
+      )
+    }
+    return
+  }
+
   component(shape: GitHubCodeBlockShape) {
     const isDark = this.editor.user.getIsDarkMode()
     const theme = isDark ? 'github-dark' : 'github-light'
@@ -98,7 +111,6 @@ export class GitHubCodeBlockShapeUtil extends ShapeUtil<GitHubCodeBlockShape> {
           shape={shape}
           theme={theme}
           onOpenPopup={() => {
-            // Dispatch a custom event that the popup component listens for
             window.dispatchEvent(
               new CustomEvent('archway:open-popup', {
                 detail: { shapeId: shape.id },

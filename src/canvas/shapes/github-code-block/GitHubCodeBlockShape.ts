@@ -14,6 +14,7 @@ export interface GitHubCodeBlockProps {
   lineEnd: number // 0 = no line specified
   fetchedCode: string
   language: string
+  branch: string // display name for the branch (empty = use ref)
   fetchStatus: string // 'idle' | 'loading' | 'success' | 'error'
   errorMessage: string
 }

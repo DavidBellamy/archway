@@ -40,6 +40,8 @@ const EXT_TO_LANG: Record<string, string> = {
   '.xml': 'xml',
   '.svg': 'xml',
   '.dockerfile': 'dockerfile',
+  '.diff': 'diff',
+  '.patch': 'diff',
   '.lua': 'lua',
   '.r': 'r',
   '.R': 'r',

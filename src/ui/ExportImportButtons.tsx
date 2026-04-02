@@ -65,15 +65,23 @@ export function ExportImportButtons() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".json,.archway.json"
+        accept=".json,.yaml,.yml"
         style={{ display: 'none' }}
         onChange={async (e) => {
           const file = e.target.files?.[0]
           if (!file) return
-          try {
-            await importDiagram(editor, file)
-          } catch (err) {
-            alert(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+          const name = file.name.toLowerCase()
+          if (name.endsWith('.yaml') || name.endsWith('.yml')) {
+            // Route YAML files to the YAML handler
+            window.dispatchEvent(
+              new CustomEvent('archway:import-yaml', { detail: { file } }),
+            )
+          } else {
+            try {
+              await importDiagram(editor, file)
+            } catch (err) {
+              alert(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+            }
           }
           e.target.value = ''
         }}

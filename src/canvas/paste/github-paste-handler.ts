@@ -50,6 +50,7 @@ function createCodeBlockFromPermalink(
       lineStart: permalink.lineStart,
       lineEnd: permalink.lineEnd,
       language: detectLanguage(permalink.fileName),
+      branch: '',
       fetchStatus: 'loading',
       fetchedCode: '',
       errorMessage: '',

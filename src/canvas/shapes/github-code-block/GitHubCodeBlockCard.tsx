@@ -1,4 +1,5 @@
 import type { GitHubCodeBlockShape } from './GitHubCodeBlockShape'
+import { HighlightedCode } from '../../../highlighting/HighlightedCode'
 
 interface GitHubCodeBlockCardProps {
   shape: GitHubCodeBlockShape
@@ -19,7 +20,17 @@ export function GitHubCodeBlockCard({
       ? `${props.fileName}:${props.lineStart}${props.lineEnd > props.lineStart ? `-${props.lineEnd}` : ''}`
       : props.fileName || 'Loading...'
 
-  const repoLabel = props.owner && props.repo ? `${props.owner}/${props.repo}` : ''
+  // Build ref display: prefer branch name, fall back to short SHA
+  const isFullSha = /^[0-9a-f]{40}$/i.test(props.ref)
+  const shortSha = isFullSha ? props.ref.slice(0, 7) : ''
+  const branchDisplay = props.branch || (isFullSha ? '' : props.ref)
+  const refPart = branchDisplay
+    ? `${branchDisplay}${shortSha ? ` (${shortSha})` : ''}`
+    : shortSha || ''
+  const repoLabel =
+    props.owner && props.repo
+      ? `${props.owner}/${props.repo}` + (refPart ? ` @ ${refPart}` : '')
+      : ''
 
   if (props.fetchStatus === 'loading') {
     return (
@@ -125,11 +136,8 @@ export function GitHubCodeBlockCard({
     )
   }
 
-  // Extract the relevant lines
-  const allLines = props.fetchedCode.split('\n')
-  const start = props.lineStart > 0 ? props.lineStart : 1
-  const end = props.lineEnd > 0 ? props.lineEnd : allLines.length
-  const displayLines = allLines.slice(start - 1, end)
+  const start = props.lineStart > 0 ? props.lineStart : undefined
+  const end = props.lineEnd > 0 ? props.lineEnd : undefined
 
   return (
     <div
@@ -204,43 +212,15 @@ export function GitHubCodeBlockCard({
         style={{
           flex: 1,
           overflow: 'hidden',
-          padding: '8px 0',
         }}
       >
-        <pre
-          style={{
-            margin: 0,
-            padding: 0,
-            fontSize: 12,
-            lineHeight: '1.45',
-            color: isDark ? '#e6edf3' : '#1f2328',
-          }}
-        >
-          {displayLines.map((line, i) => (
-            <div
-              key={i}
-              style={{
-                display: 'flex',
-                paddingRight: 12,
-              }}
-            >
-              <span
-                style={{
-                  display: 'inline-block',
-                  width: 40,
-                  textAlign: 'right',
-                  paddingRight: 12,
-                  color: isDark ? '#484f58' : '#9ca3af',
-                  userSelect: 'none',
-                  flexShrink: 0,
-                }}
-              >
-                {start + i}
-              </span>
-              <span style={{ whiteSpace: 'pre' }}>{line}</span>
-            </div>
-          ))}
-        </pre>
+        <HighlightedCode
+          code={props.fetchedCode}
+          language={props.language}
+          theme={theme}
+          lineStart={start}
+          lineEnd={end}
+        />
       </div>
 
       {/* Footer */}
@@ -257,7 +237,7 @@ export function GitHubCodeBlockCard({
           flexShrink: 0,
         }}
       >
-        <span>Click to expand</span>
+        <span>Double-click to expand</span>
         <span style={{ marginLeft: 'auto' }}>
           <a
             href={props.url}
