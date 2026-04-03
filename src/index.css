@@ -37,6 +37,28 @@ body,
   white-space: pre;
 }
 
+/* Line number gutter via CSS counters */
+.archway-line-numbers .shiki code {
+  counter-reset: line calc(var(--archway-line-start, 1) - 1);
+}
+
+.archway-line-numbers .shiki code .line {
+  padding-left: 0;
+}
+
+.archway-line-numbers .shiki code .line::before {
+  counter-increment: line;
+  content: counter(line);
+  display: inline-block;
+  width: 3.5em;
+  text-align: right;
+  padding-right: 1em;
+  margin-right: 0.5em;
+  color: #484f58;
+  user-select: none;
+  flex-shrink: 0;
+}
+
 /* Code block highlighted line decoration */
 .archway-highlighted-line {
   background-color: rgba(234, 179, 8, 0.15);

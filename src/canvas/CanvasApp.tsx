@@ -13,8 +13,6 @@ import { buildDiagramFromYaml } from '../yaml-import/builder'
 const customShapeUtils = [GitHubCodeBlockShapeUtil]
 
 export function CanvasApp() {
-  const { resolved } = useTheme()
-
   const handleMount = useCallback((editor: Editor) => {
     const getPat = () => localStorage.getItem(LS_PAT)
     registerGitHubPasteHandler(editor, getPat)
@@ -22,7 +20,7 @@ export function CanvasApp() {
 
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
-      <Tldraw shapeUtils={customShapeUtils} onMount={handleMount}>
+      <Tldraw shapeUtils={customShapeUtils} onMount={handleMount} persistenceKey="archway">
         <ThemeSyncer />
         <Toolbar>
           <ExportImportButtons />
@@ -46,31 +44,63 @@ function ThemeSyncer() {
   return null
 }
 
-/** Listens for YAML file import events dispatched by ExportImportButtons */
+/** Listens for YAML file import events and drag-and-drop */
 function YamlImportListener() {
   const editor = useEditor()
   const editorRef = useRef(editor)
   editorRef.current = editor
 
-  useEffect(() => {
-    const handler = async (e: Event) => {
-      const file = (e as CustomEvent).detail?.file as File | undefined
-      if (!file) return
-
-      try {
-        const text = await file.text()
-        const diagram = parseArchwayYaml(text)
-        await buildDiagramFromYaml(editorRef.current, diagram)
-      } catch (err) {
-        alert(
-          `YAML import failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        )
-      }
+  const importYaml = useCallback(async (file: File) => {
+    try {
+      const text = await file.text()
+      const diagram = parseArchwayYaml(text)
+      await buildDiagramFromYaml(editorRef.current, diagram)
+      // Wait for shapes to settle, then zoom to fit
+      setTimeout(() => {
+        editorRef.current.zoomToFit({ animation: { duration: 300 } })
+      }, 400)
+    } catch (err) {
+      alert(
+        `YAML import failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      )
     }
+  }, [])
 
+  // Listen for custom event from toolbar button
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const file = (e as CustomEvent).detail?.file as File | undefined
+      if (file) importYaml(file)
+    }
     window.addEventListener('archway:import-yaml', handler)
     return () => window.removeEventListener('archway:import-yaml', handler)
-  }, [])
+  }, [importYaml])
+
+  // Drag-and-drop .yaml files onto the canvas
+  useEffect(() => {
+    const handleDragOver = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes('Files')) {
+        e.preventDefault()
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+      }
+    }
+    const handleDrop = (e: DragEvent) => {
+      const file = e.dataTransfer?.files[0]
+      if (!file) return
+      const name = file.name.toLowerCase()
+      if (name.endsWith('.yaml') || name.endsWith('.yml')) {
+        e.preventDefault()
+        e.stopPropagation()
+        importYaml(file)
+      }
+    }
+    window.addEventListener('dragover', handleDragOver)
+    window.addEventListener('drop', handleDrop)
+    return () => {
+      window.removeEventListener('dragover', handleDragOver)
+      window.removeEventListener('drop', handleDrop)
+    }
+  }, [importYaml])
 
   return null
 }

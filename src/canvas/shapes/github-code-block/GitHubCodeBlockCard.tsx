@@ -220,6 +220,7 @@ export function GitHubCodeBlockCard({
           theme={theme}
           lineStart={start}
           lineEnd={end}
+          showLineNumbers
         />
       </div>
 

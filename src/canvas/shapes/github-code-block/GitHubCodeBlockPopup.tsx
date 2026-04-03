@@ -207,6 +207,7 @@ export function GitHubCodeBlockPopup() {
               lineStart={viewStart}
               lineEnd={viewEnd}
               highlightLines={highlightLines}
+              showLineNumbers
             />
           </div>
         </div>

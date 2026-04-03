@@ -9,6 +9,7 @@ interface HighlightedCodeProps {
   lineStart?: number // 1-based, first line number to display
   lineEnd?: number // 1-based, last line number to display
   highlightLines?: [number, number] // 1-based range of lines to visually highlight
+  showLineNumbers?: boolean // show gutter line numbers (default: false)
   className?: string
   style?: React.CSSProperties
 }
@@ -20,11 +21,14 @@ export function HighlightedCode({
   lineStart,
   lineEnd,
   highlightLines,
+  showLineNumbers = false,
   className,
   style,
 }: HighlightedCodeProps) {
   const [html, setHtml] = useState<string>('')
   const [loading, setLoading] = useState(true)
+
+  const start = lineStart ? Math.max(1, lineStart) : 1
 
   useEffect(() => {
     let cancelled = false
@@ -35,13 +39,11 @@ export function HighlightedCode({
       const loadedLangs = highlighter.getLoadedLanguages()
       const lang = loadedLangs.includes(language) ? language : 'text'
 
-      // Extract line range if specified
       const lines = code.split('\n')
-      const start = lineStart ? Math.max(1, lineStart) : 1
+      const s = lineStart ? Math.max(1, lineStart) : 1
       const end = lineEnd ? Math.min(lines.length, lineEnd) : lines.length
-      const slice = lines.slice(start - 1, end).join('\n')
+      const slice = lines.slice(s - 1, end).join('\n')
 
-      // Build decorations for highlighted lines
       const decorations: Parameters<typeof highlighter.codeToHtml>[1] extends {
         decorations?: infer D
       }
@@ -49,8 +51,8 @@ export function HighlightedCode({
         : never = []
 
       if (highlightLines) {
-        const hlStart = Math.max(0, highlightLines[0] - start)
-        const hlEnd = Math.min(end - start, highlightLines[1] - start)
+        const hlStart = Math.max(0, highlightLines[0] - s)
+        const hlEnd = Math.min(end - s, highlightLines[1] - s)
         for (let i = hlStart; i <= hlEnd; i++) {
           decorations.push({
             start: { line: i, character: 0 },
@@ -66,7 +68,6 @@ export function HighlightedCode({
         decorations,
       })
 
-      // Shiki output is safe (it escapes source code), but sanitize for defense-in-depth
       const sanitized = DOMPurify.sanitize(rawHtml, {
         USE_PROFILES: { html: true },
         ADD_ATTR: ['style'],
@@ -101,10 +102,19 @@ export function HighlightedCode({
     )
   }
 
+  // Set CSS custom property for the starting line number so the
+  // counter-based gutter in index.css starts at the right value
+  const wrapperStyle: React.CSSProperties = {
+    ...style,
+    ...(showLineNumbers
+      ? { '--archway-line-start': start } as React.CSSProperties
+      : {}),
+  }
+
   return (
     <div
-      className={className}
-      style={style}
+      className={`${className ?? ''} ${showLineNumbers ? 'archway-line-numbers' : ''}`.trim()}
+      style={wrapperStyle}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   )
