@@ -104,7 +104,7 @@ export function HighlightedCode({
   return (
     <div
       className={className}
-      style={{ fontSize: '13px', lineHeight: '1.45', ...style }}
+      style={style}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   )

@@ -17,10 +17,26 @@ body,
   height: 100%;
 }
 
+/* Shiki output normalization */
+.shiki {
+  margin: 0;
+  padding: 8px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.shiki code {
+  display: block;
+}
+
+.shiki code .line {
+  display: block;
+  padding: 0 12px;
+}
+
 /* Code block highlighted line decoration */
 .archway-highlighted-line {
   background-color: rgba(234, 179, 8, 0.15);
-  display: block;
 }
 
 .dark .archway-highlighted-line {
