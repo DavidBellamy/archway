@@ -76,6 +76,31 @@ function YamlImportListener() {
     return () => window.removeEventListener('archway:import-yaml', handler)
   }, [importYaml])
 
+  // Auto-load YAML from ?yaml=/path/to/file.yaml URL parameter
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const yamlPath = params.get('yaml')
+    if (!yamlPath) return
+
+    const url = yamlPath.startsWith('http')
+      ? yamlPath
+      : `/__local_file?path=${encodeURIComponent(yamlPath)}`
+
+    fetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
+        return res.text()
+      })
+      .then((text) => {
+        const name = yamlPath.split('/').pop() || 'diagram.yaml'
+        const file = new File([text], name, { type: 'text/yaml' })
+        importYaml(file)
+      })
+      .catch((err) => {
+        console.error('Failed to load YAML from URL param:', err)
+      })
+  }, [importYaml])
+
   // Drag-and-drop .yaml files onto the canvas
   useEffect(() => {
     const handleDragOver = (e: DragEvent) => {
