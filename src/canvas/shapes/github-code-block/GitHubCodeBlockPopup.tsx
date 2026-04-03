@@ -17,6 +17,7 @@ export function GitHubCodeBlockPopup() {
   const isDark = resolved === 'dark'
 
   const [showFullFile, setShowFullFile] = useState(false)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const highlightRef = useRef<HTMLDivElement>(null)
 
   // Listen for custom event from ShapeUtil
@@ -41,6 +42,21 @@ export function GitHubCodeBlockPopup() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [popup.isOpen, closePopup])
+
+  // Scroll to highlighted lines after render
+  useEffect(() => {
+    if (!popup.isOpen) return
+    // Wait for Shiki to render, then scroll to the first highlighted line
+    const timer = setTimeout(() => {
+      const container = scrollContainerRef.current
+      if (!container) return
+      const highlighted = container.querySelector('.archway-highlighted-line')
+      if (highlighted) {
+        highlighted.scrollIntoView({ block: 'center', behavior: 'instant' })
+      }
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [popup.isOpen, popup.shapeId, showFullFile])
 
   if (!popup.isOpen || !popup.shapeId) return null
 
@@ -176,6 +192,7 @@ export function GitHubCodeBlockPopup() {
 
         {/* Code viewer */}
         <div
+          ref={scrollContainerRef}
           style={{
             flex: 1,
             overflow: 'auto',
