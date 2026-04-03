@@ -94,11 +94,12 @@ function YamlImportListener() {
         importYaml(file)
       }
     }
-    window.addEventListener('dragover', handleDragOver)
-    window.addEventListener('drop', handleDrop)
+    // Use capture phase so we intercept before tldraw rejects the file type
+    window.addEventListener('dragover', handleDragOver, true)
+    window.addEventListener('drop', handleDrop, true)
     return () => {
-      window.removeEventListener('dragover', handleDragOver)
-      window.removeEventListener('drop', handleDrop)
+      window.removeEventListener('dragover', handleDragOver, true)
+      window.removeEventListener('drop', handleDrop, true)
     }
   }, [importYaml])
 
