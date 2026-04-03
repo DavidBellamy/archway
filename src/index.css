@@ -17,21 +17,24 @@ body,
   height: 100%;
 }
 
-/* Shiki output normalization */
+/* Shiki output normalization: flex column on <code> collapses
+   the \n whitespace text nodes between .line spans that <pre>
+   would otherwise preserve, preventing double line spacing. */
 .shiki {
-  margin: 0;
-  padding: 8px 0;
-  font-size: 13px;
-  line-height: 1.5;
+  margin: 0 !important;
+  padding: 8px 0 !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
 }
 
 .shiki code {
-  display: block;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 .shiki code .line {
-  display: block;
   padding: 0 12px;
+  white-space: pre;
 }
 
 /* Code block highlighted line decoration */
