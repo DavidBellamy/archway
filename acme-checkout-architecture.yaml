@@ -1,0 +1,131 @@
+name: "Acme Payments: Checkout Flow Architecture"
+
+layout:
+  direction: top-to-bottom
+
+blocks:
+  # ── Layer 1: API Gateway ─────────────────────────────────────────
+  - id: gateway-routes
+    url: https://github.com/acme-corp/payments-api/blob/a4c82e9f01b3d7e56f890a2c4d6e8f0b1a3c5d7e/src/gateway/routes.ts#L12-L48
+    branch: main
+    label: "routes.ts (POST /checkout, POST /refund)"
+
+  - id: auth-middleware
+    url: https://github.com/acme-corp/payments-api/blob/a4c82e9f01b3d7e56f890a2c4d6e8f0b1a3c5d7e/src/gateway/middleware/auth.ts#L23-L67
+    branch: main
+    label: "auth.ts (JWT validation + merchant scoping)"
+
+  # ── Layer 2: Checkout Service ────────────────────────────────────
+  - id: checkout-handler
+    url: https://github.com/acme-corp/payments-api/blob/a4c82e9f01b3d7e56f890a2c4d6e8f0b1a3c5d7e/src/services/checkout/handler.ts#L30-L112
+    branch: main
+    label: "handler.ts: processCheckout()"
+
+  - id: fraud-check
+    url: https://github.com/acme-corp/payments-api/blob/a4c82e9f01b3d7e56f890a2c4d6e8f0b1a3c5d7e/src/services/fraud/detector.ts#L55-L98
+    branch: main
+    label: "detector.ts: evaluateRisk()"
+
+  - id: idempotency-store
+    url: https://github.com/acme-corp/payments-api/blob/a4c82e9f01b3d7e56f890a2c4d6e8f0b1a3c5d7e/src/services/checkout/idempotency.ts#L18-L52
+    branch: main
+    label: "idempotency.ts (Redis-backed dedup)"
+
+  # ── Layer 3: Payment Processing ──────────────────────────────────
+  - id: processor-factory
+    url: https://github.com/acme-corp/payments-api/blob/a4c82e9f01b3d7e56f890a2c4d6e8f0b1a3c5d7e/src/processors/factory.ts#L10-L45
+    branch: main
+    label: "factory.ts: resolveProcessor()"
+
+  - id: stripe-adapter
+    url: https://github.com/acme-corp/payments-api/blob/a4c82e9f01b3d7e56f890a2c4d6e8f0b1a3c5d7e/src/processors/stripe/adapter.ts#L22-L89
+    branch: main
+    label: "stripe/adapter.ts: charge()"
+
+  - id: adyen-adapter
+    url: https://github.com/acme-corp/payments-api/blob/a4c82e9f01b3d7e56f890a2c4d6e8f0b1a3c5d7e/src/processors/adyen/adapter.ts#L20-L76
+    branch: feat/adyen-integration
+    label: "adyen/adapter.ts: charge() [new]"
+
+  # ── Layer 4: Event Bus + Ledger ──────────────────────────────────
+  - id: event-publisher
+    url: https://github.com/acme-corp/payments-api/blob/a4c82e9f01b3d7e56f890a2c4d6e8f0b1a3c5d7e/src/events/publisher.ts#L14-L58
+    branch: main
+    label: "publisher.ts: emitPaymentEvent()"
+
+  - id: ledger-writer
+    url: https://github.com/acme-corp/payments-api/blob/a4c82e9f01b3d7e56f890a2c4d6e8f0b1a3c5d7e/src/ledger/writer.ts#L30-L85
+    branch: main
+    label: "writer.ts: recordTransaction()"
+
+  - id: webhook-dispatcher
+    url: https://github.com/acme-corp/payments-api/blob/a4c82e9f01b3d7e56f890a2c4d6e8f0b1a3c5d7e/src/webhooks/dispatcher.ts#L42-L110
+    branch: main
+    label: "dispatcher.ts: notifyMerchant()"
+
+  # ── Annotations ──────────────────────────────────────────────────
+  - id: pci-note
+    type: note
+    content: "PCI DSS: raw card numbers never leave the processor adapter layer. Tokens are passed upstream. All inter-service calls use mTLS."
+
+  - id: adyen-note
+    type: note
+    content: "IN PROGRESS: Adyen adapter targets EU expansion (Q3). Stripe remains default for US/CA merchants. Routing logic in factory.ts."
+
+  - id: idempotency-note
+    type: note
+    content: "Idempotency keys expire after 24h in Redis. Duplicate checkout requests within that window return the cached response without reprocessing."
+
+  - id: race-condition-note
+    type: note
+    content: "BUG (PAY-2847): ledger write and webhook dispatch are not transactional. A failed webhook can leave the merchant unnotified of a successful charge."
+
+connections:
+  - from: gateway-routes
+    to: auth-middleware
+    label: "every request passes through auth"
+  - from: auth-middleware
+    to: checkout-handler
+    label: "authenticated + scoped request"
+  - from: checkout-handler
+    to: fraud-check
+    label: "pre-charge risk evaluation"
+  - from: checkout-handler
+    to: idempotency-store
+    label: "check/set idempotency key"
+  - from: checkout-handler
+    to: processor-factory
+    label: "resolve payment processor"
+  - from: processor-factory
+    to: stripe-adapter
+    label: "US/CA merchants"
+  - from: processor-factory
+    to: adyen-adapter
+    label: "EU merchants (Q3)"
+  - from: stripe-adapter
+    to: event-publisher
+    label: "on charge success/failure"
+  - from: adyen-adapter
+    to: event-publisher
+    label: "on charge success/failure"
+  - from: event-publisher
+    to: ledger-writer
+    label: "payment.completed / payment.failed"
+  - from: event-publisher
+    to: webhook-dispatcher
+    label: "async merchant notification"
+  - from: stripe-adapter
+    to: pci-note
+    label: "tokenized card data only"
+  - from: adyen-adapter
+    to: adyen-note
+    label: "EU expansion target"
+  - from: idempotency-store
+    to: idempotency-note
+    label: "24h TTL"
+  - from: ledger-writer
+    to: race-condition-note
+    label: "known bug"
+  - from: webhook-dispatcher
+    to: race-condition-note
+    label: "known bug"
