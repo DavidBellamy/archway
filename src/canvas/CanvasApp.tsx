@@ -15,18 +15,15 @@ const customShapeUtils = [GitHubCodeBlockShapeUtil]
 export function CanvasApp() {
   const { resolved } = useTheme()
 
-  const handleMount = useCallback(
-    (editor: Editor) => {
-      const getPat = () => localStorage.getItem(LS_PAT)
-      registerGitHubPasteHandler(editor, getPat)
-      editor.user.updateUserPreferences({ colorScheme: resolved })
-    },
-    [resolved],
-  )
+  const handleMount = useCallback((editor: Editor) => {
+    const getPat = () => localStorage.getItem(LS_PAT)
+    registerGitHubPasteHandler(editor, getPat)
+  }, [])
 
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
       <Tldraw shapeUtils={customShapeUtils} onMount={handleMount}>
+        <ThemeSyncer />
         <Toolbar>
           <ExportImportButtons />
         </Toolbar>
@@ -35,6 +32,18 @@ export function CanvasApp() {
       </Tldraw>
     </div>
   )
+}
+
+/** Syncs React theme context to tldraw whenever it changes */
+function ThemeSyncer() {
+  const editor = useEditor()
+  const { resolved } = useTheme()
+
+  useEffect(() => {
+    editor.user.updateUserPreferences({ colorScheme: resolved })
+  }, [editor, resolved])
+
+  return null
 }
 
 /** Listens for YAML file import events dispatched by ExportImportButtons */
